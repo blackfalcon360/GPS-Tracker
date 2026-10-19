@@ -21,30 +21,37 @@ public class SplashActivity extends Activity {
         root.setGravity(Gravity.CENTER);
         root.setBackgroundColor(Color.BLACK);
 
+        // Line 1: Main Title
         TextView line1 = new TextView(this);
-        line2.setText("GPS-Tracker \uD83E\uDD85");
-        line2.setTextColor(Color.WHITE);
-        line2.setTextSize(50);
-        line2.setGravity(Gravity.CENTER);
-        line2.setPadding(0, 24, 0, 0);
-
-        TextView line3 = new TextView(this);
-        line1.setText("Brought to you By:");
+        line1.setText("GPS-Tracker");
         line1.setTextColor(Color.WHITE);
-        line1.setTextSize(22);
+        line1.setTextSize(50);
         line1.setGravity(Gravity.CENTER);
 
-        TextView line4 = new TextView(this);
-        line2.setText("Black Falcon \uD83E\uDD85");
+        // Line 2: Subtitle label (Added top padding to create space from Line 1)
+        TextView line2 = new TextView(this);
+        line2.setText("Brought to you By:");
         line2.setTextColor(Color.WHITE);
-        line2.setTextSize(40);
+        line2.setTextSize(22);
         line2.setGravity(Gravity.CENTER);
-        line2.setPadding(0, 24, 0, 0);
+        line2.setPadding(0, 80, 0, 0); // <-- Adjust the '80' value to make the gap larger or smaller
 
+        // Line 3: Creator name
+        TextView line3 = new TextView(this);
+        line3.setText("Black Falcon \uD83E\uDD85");
+        line3.setTextColor(Color.WHITE);
+        line3.setTextSize(40);
+        line3.setGravity(Gravity.CENTER);
+        line3.setPadding(0, 24, 0, 0);
+
+        // Add all views to the root layout in order
         root.addView(line1);
         root.addView(line2);
+        root.addView(line3);
+        
         setContentView(root);
 
+        // Delay to transition to MainActivity
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             startActivity(new Intent(SplashActivity.this, MainActivity.class));
             finish();
