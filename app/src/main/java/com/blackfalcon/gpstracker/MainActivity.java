@@ -42,8 +42,10 @@ import java.util.concurrent.Executors;
 @SuppressWarnings("deprecation")
 public class MainActivity extends Activity {
 
-    private static final int GREEN = 0xFF2ECC71, GRAY = 0xFF9E9E9E, CARD = 0xFF0C0C1E, EDGE = 0xFF3A3A60,
-            AMBER = 0xFFFFB300, BLUE = 0xFF4FC3F7, RED = 0xFFE57373;
+    private static final int GREEN = 0xFF2ECC71, AMBER = 0xFFFFB300, BLUE = 0xFF4FC3F7, RED = 0xFFE57373;
+    private int CARD, EDGE, BG, TEXT_COLOR, SUBTEXT_COLOR, GRAY = 0xFF9E9E9E;
+    private boolean darkMode;
+
     private static final int REQ_PERM = 1, REQ_EXPORT = 2;
 
     private SharedPreferences prefs;
@@ -115,6 +117,11 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         prefs = getSharedPreferences("gpstracker", MODE_PRIVATE);
+        
+        // Theme Setup
+        darkMode = prefs.getBoolean("darkMode", true);
+        setupThemeColors();
+
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         Recorder.I.init(new File(getFilesDir(), "tracks"));
         store = Recorder.I.store();
@@ -132,6 +139,22 @@ public class MainActivity extends Activity {
         }
         buildUi();
         if (!hasPerm()) askPermission();
+    }
+
+    private void setupThemeColors() {
+        if (darkMode) {
+            BG = Color.BLACK;
+            CARD = 0xFF0C0C1E;
+            EDGE = 0xFF3A3A60;
+            TEXT_COLOR = Color.WHITE;
+            SUBTEXT_COLOR = GRAY;
+        } else {
+            BG = 0xFFF0F2F5;
+            CARD = 0xFFFFFFFF;
+            EDGE = 0xFFDDDDDD;
+            TEXT_COLOR = Color.BLACK;
+            SUBTEXT_COLOR = 0xFF666666;
+        }
     }
 
     @Override
@@ -252,7 +275,7 @@ public class MainActivity extends Activity {
     }
 
     private TextView chip(String text, boolean selected, View.OnClickListener l) {
-        TextView c = tv(text, 14, selected ? Color.WHITE : GRAY);
+        TextView c = tv(text, 14, selected ? Color.WHITE : SUBTEXT_COLOR);
         c.setGravity(Gravity.CENTER);
         c.setTypeface(selected ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
         c.setBackground(box(selected ? 0xFF1C1C3A : CARD, selected ? GREEN : EDGE, 10));
@@ -266,8 +289,8 @@ public class MainActivity extends Activity {
         c.setOrientation(LinearLayout.VERTICAL);
         c.setBackground(box(CARD, EDGE, 12));
         c.setPadding(dp(12), dp(8), dp(12), dp(8));
-        c.addView(tv(t(titleKey), 12, GRAY));
-        TextView v = tv("--", 20, Color.WHITE);
+        c.addView(tv(t(titleKey), 12, SUBTEXT_COLOR));
+        TextView v = tv("--", 20, TEXT_COLOR);
         v.setTypeface(Typeface.DEFAULT_BOLD);
         c.addView(v);
         stat[index] = v;
@@ -291,7 +314,7 @@ public class MainActivity extends Activity {
     // ------------------------------------------------------------- UI
     private void buildUi() {
         FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(Color.BLACK);
+        root.setBackgroundColor(BG);
         root.setLayoutDirection(fmt.lang == Lang.EN ? View.LAYOUT_DIRECTION_LTR : View.LAYOUT_DIRECTION_RTL);
 
         LinearLayout col = new LinearLayout(this);
@@ -303,7 +326,7 @@ public class MainActivity extends Activity {
         String[] keys = {"tab_rec", "tab_tracks", "tab_set"};
         for (int i = 0; i < 3; i++) {
             final int idx = i;
-            TextView x = tv(t(keys[i]), 14, Color.WHITE);
+            TextView x = tv(t(keys[i]), 14, TEXT_COLOR);
             x.setGravity(Gravity.CENTER);
             x.setPadding(0, dp(9), 0, dp(9));
             x.setOnClickListener(new View.OnClickListener() {
@@ -334,9 +357,9 @@ public class MainActivity extends Activity {
         col.addView(frame, lp(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         root.addView(col, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        TextView credit = tv("By: Black Falcon 🦅", 12, GRAY);
+        TextView credit = tv("By: Black Falcon 🦅", 12, SUBTEXT_COLOR);
         credit.setPadding(dp(8), dp(3), dp(8), dp(3));
-        credit.setBackground(box(0xCC000000, EDGE, 8));
+        credit.setBackground(box(darkMode ? 0xCC000000 : 0xCCE0E0E0, EDGE, 8));
         FrameLayout.LayoutParams cl = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.RIGHT);
         cl.setMargins(0, 0, dp(8), dp(6));
         root.addView(credit, cl);
@@ -351,6 +374,7 @@ public class MainActivity extends Activity {
             pages[i].setVisibility(!detailOpen && i == tab ? View.VISIBLE : View.GONE);
             tabs[i].setBackground(box(i == tab ? 0xFF1C1C3A : CARD, i == tab ? BLUE : EDGE, 10));
             tabs[i].setTypeface(i == tab ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+            tabs[i].setTextColor(i == tab ? Color.WHITE : TEXT_COLOR);
         }
         pages[3].setVisibility(detailOpen ? View.VISIBLE : View.GONE);
     }
@@ -365,14 +389,14 @@ public class MainActivity extends Activity {
         sv.addView(box);
 
         LinearLayout status = card();
-        gpsTv = tv("", 14, GRAY);
-        stateTv = tv("", 14, GRAY);
+        gpsTv = tv("", 14, SUBTEXT_COLOR);
+        stateTv = tv("", 14, SUBTEXT_COLOR);
         stateTv.setTypeface(Typeface.DEFAULT_BOLD);
         status.addView(gpsTv);
         status.addView(stateTv);
         box.addView(status);
 
-        clockTv = tv("0:00:00", 52, Color.WHITE);
+        clockTv = tv("0:00:00", 52, TEXT_COLOR);
         clockTv.setGravity(Gravity.CENTER);
         clockTv.setTypeface(Typeface.DEFAULT_BOLD);
         clockTv.setPadding(0, dp(4), 0, dp(8));
@@ -399,7 +423,7 @@ public class MainActivity extends Activity {
         box.addView(pair(statCell("ascent", 4), statCell("descent", 5)));
 
         LinearLayout rc = card();
-        TextView rt = tv(t("route"), 13, GRAY);
+        TextView rt = tv(t("route"), 13, SUBTEXT_COLOR);
         rt.setTypeface(Typeface.DEFAULT_BOLD);
         rc.addView(rt);
         recPath = new PathView(this);
@@ -407,7 +431,7 @@ public class MainActivity extends Activity {
         box.addView(rc);
 
         LinearLayout ec = card();
-        TextView et = tv(t("elev_hist"), 13, GRAY);
+        TextView et = tv(t("elev_hist"), 13, SUBTEXT_COLOR);
         et.setTypeface(Typeface.DEFAULT_BOLD);
         ec.addView(et);
         recElev = new ElevView(this);
@@ -415,7 +439,7 @@ public class MainActivity extends Activity {
         ec.addView(recElev, lp(ViewGroup.LayoutParams.MATCH_PARENT, dp(160), 0));
         box.addView(ec);
 
-        noteTv = tv(t("bg_note"), 12, GRAY);
+        noteTv = tv(t("bg_note"), 12, SUBTEXT_COLOR);
         noteTv.setPadding(dp(4), dp(2), dp(4), 0);
         box.addView(noteTv);
         return sv;
@@ -468,7 +492,7 @@ public class MainActivity extends Activity {
         gpsTv.setText("● " + g);
         gpsTv.setTextColor(gc);
         stateTv.setText(rec ? (paused ? "❚❚ " + t("paused") : "● " + t("recording")) : t("ready"));
-        stateTv.setTextColor(rec ? (paused ? AMBER : RED) : GRAY);
+        stateTv.setTextColor(rec ? (paused ? AMBER : RED) : SUBTEXT_COLOR);
 
         clockTv.setText(fmt.dur(rec ? r.elapsed(now) : 0));
         double alt = rec && !Double.isNaN(r.smoothAlt()) ? r.smoothAlt() : r.lastAlt;
@@ -523,7 +547,7 @@ public class MainActivity extends Activity {
         List<TrackStore.Meta> list = store.list();
         if (list.isEmpty()) {
             LinearLayout c = card();
-            c.addView(tv(t("no_tracks"), 15, Color.WHITE));
+            c.addView(tv(t("no_tracks"), 15, TEXT_COLOR));
             tracksBox.addView(c);
             return;
         }
@@ -534,11 +558,11 @@ public class MainActivity extends Activity {
         tracksBox.addView(sum);
         for (final TrackStore.Meta m : list) {
             LinearLayout c = card();
-            TextView n = tv(m.name, 17, Color.WHITE);
+            TextView n = tv(m.name, 17, TEXT_COLOR);
             n.setTypeface(Typeface.DEFAULT_BOLD);
             c.addView(n);
-            c.addView(tv(fmt.date(m.start), 12, GRAY));
-            c.addView(tv(fmt.dist(m.dist) + "  ·  " + fmt.dur(m.dur) + "  ·  ↑ " + fmt.alt(m.asc) + "  ↓ " + fmt.alt(m.desc), 14, Color.WHITE));
+            c.addView(tv(fmt.date(m.start), 12, SUBTEXT_COLOR));
+            c.addView(tv(fmt.dist(m.dist) + "  ·  " + fmt.dur(m.dur) + "  ·  ↑ " + fmt.alt(m.asc) + "  ↓ " + fmt.alt(m.desc), 14, TEXT_COLOR));
             c.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View v) { openDetail(m); } });
             tracksBox.addView(c);
         }
@@ -558,15 +582,15 @@ public class MainActivity extends Activity {
         back.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View v) { closeDetail(); } });
         top.addView(back);
         detailBox.addView(top);
-        TextView name = tv(m.name, 20, Color.WHITE);
+        TextView name = tv(m.name, 20, TEXT_COLOR);
         name.setTypeface(Typeface.DEFAULT_BOLD);
         detailBox.addView(name);
-        TextView date = tv(fmt.date(m.start), 12, GRAY);
+        TextView date = tv(fmt.date(m.start), 12, SUBTEXT_COLOR);
         date.setPadding(0, 0, 0, dp(8));
         detailBox.addView(date);
 
         LinearLayout rc = card();
-        TextView rt = tv(t("route"), 13, GRAY);
+        TextView rt = tv(t("route"), 13, SUBTEXT_COLOR);
         rt.setTypeface(Typeface.DEFAULT_BOLD);
         rc.addView(rt);
         final PathView path = new PathView(this);
@@ -575,14 +599,14 @@ public class MainActivity extends Activity {
         detailBox.addView(rc);
 
         LinearLayout ec = card();
-        TextView et = tv(t("elev_hist"), 13, GRAY);
+        TextView et = tv(t("elev_hist"), 13, SUBTEXT_COLOR);
         et.setTypeface(Typeface.DEFAULT_BOLD);
         ec.addView(et);
         final ElevView elev = new ElevView(this);
         elev.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
         elev.set(new double[0], new double[0], fmt.imperial, fmt.distUnit(), fmt.altUnit(), t("loading"));
         ec.addView(elev, lp(ViewGroup.LayoutParams.MATCH_PARENT, dp(190), 0));
-        TextView ec2 = tv(t("min_alt") + " " + fmt.alt(m.minAlt) + "    ·    " + t("max_alt") + " " + fmt.alt(m.maxAlt), 13, Color.WHITE);
+        TextView ec2 = tv(t("min_alt") + " " + fmt.alt(m.minAlt) + "    ·    " + t("max_alt") + " " + fmt.alt(m.maxAlt), 13, TEXT_COLOR);
         ec2.setPadding(0, dp(4), 0, 0);
         ec.addView(ec2);
         detailBox.addView(ec);
@@ -626,8 +650,8 @@ public class MainActivity extends Activity {
         c.setOrientation(LinearLayout.VERTICAL);
         c.setBackground(box(CARD, EDGE, 12));
         c.setPadding(dp(12), dp(8), dp(12), dp(8));
-        c.addView(tv(title, 12, GRAY));
-        TextView v = tv(value, 18, Color.WHITE);
+        c.addView(tv(title, 12, SUBTEXT_COLOR));
+        TextView v = tv(value, 18, TEXT_COLOR);
         v.setTypeface(Typeface.DEFAULT_BOLD);
         c.addView(v);
         return c;
@@ -732,6 +756,23 @@ public class MainActivity extends Activity {
         box.setPadding(dp(2), dp(2), dp(2), dp(48));
         sv.addView(box);
 
+        // Theme Setting Section
+        box.addView(title("Theme / تھیم"));
+        LinearLayout tr = new LinearLayout(this);
+        tr.addView(chip("Dark / ڈارک", darkMode, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                prefs.edit().putBoolean("darkMode", true).apply();
+                recreate();
+            }
+        }), weight(dp(2), dp(2)));
+        tr.addView(chip("Light / لائٹ", !darkMode, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                prefs.edit().putBoolean("darkMode", false).apply();
+                recreate();
+            }
+        }), weight(dp(2), dp(2)));
+        box.addView(tr);
+
         box.addView(title(t("lang")));
         LinearLayout lr = new LinearLayout(this);
         String[] ln = {"English", "اردو", "العربية"};
@@ -762,7 +803,7 @@ public class MainActivity extends Activity {
         final String[] ins = {"1s", "3s", "10s"};
         for (int i = 0; i < 3; i++) {
             final int ii = i;
-            ir.addView(chip(ins[i], intervalIdx == i, new View.OnClickListener() {
+            ir.addView(chip(ins[i], intervalIdx == ii, new View.OnClickListener() {
                 @Override public void onClick(View v) {
                     intervalIdx = ii;
                     prefs.edit().putInt("interval", ii).apply();
@@ -777,7 +818,7 @@ public class MainActivity extends Activity {
         final String[] acs = {t("acc_high"), t("acc_bal"), t("acc_low")};
         for (int i = 0; i < 3; i++) {
             final int ai = i;
-            ar.addView(chip(acs[i], accIdx == i, new View.OnClickListener() {
+            ar.addView(chip(acs[i], accIdx == ai, new View.OnClickListener() {
                 @Override public void onClick(View v) {
                     accIdx = ai;
                     prefs.edit().putInt("acc", ai).apply();
