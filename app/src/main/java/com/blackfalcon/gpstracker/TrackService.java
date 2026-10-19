@@ -65,7 +65,7 @@ public class TrackService extends Service implements LocationListener {
         SharedPreferences prefs = getSharedPreferences("gpstracker", MODE_PRIVATE);
 
         if (ACT_START.equals(a)) {
-            startFg();                            // Android requires this right after startForegroundService()
+            startFg();                                   // Android requires this right after startForegroundService()
             if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 stopForeground(true);
                 stopSelf();
@@ -170,7 +170,7 @@ public class TrackService extends Service implements LocationListener {
         PendingIntent pi = PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CHANNEL) : new Notification.Builder(this);
         String title = Recorder.I.paused ? f.t("notif_paused") : f.t("notif_title");
-        String text = f.dist(Recorder.I.dist()) + "  ·  " + f.dur(Recorder.I.elapsed(System.currentTimeMillis()));
+        String text = f.dist(Recorder.I.dist()) + "  \u00B7  " + f.dur(Recorder.I.elapsed(System.currentTimeMillis()));
         b.setSmallIcon(android.R.drawable.ic_menu_mylocation)
                 .setContentTitle(title)
                 .setContentText(text)
@@ -197,4 +197,4 @@ public class TrackService extends Service implements LocationListener {
         try { if (wl != null && wl.isHeld()) wl.release(); } catch (Exception e) { }
         wl = null;
     }
-}
+} 
