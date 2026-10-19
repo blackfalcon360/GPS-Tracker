@@ -22,12 +22,19 @@ public class SplashActivity extends Activity {
         root.setBackgroundColor(Color.BLACK);
 
         TextView line1 = new TextView(this);
+        line2.setText("GPS-Tracker \uD83E\uDD85");
+        line2.setTextColor(Color.WHITE);
+        line2.setTextSize(50);
+        line2.setGravity(Gravity.CENTER);
+        line2.setPadding(0, 24, 0, 0);
+
+        TextView line3 = new TextView(this);
         line1.setText("Brought to you By:");
         line1.setTextColor(Color.WHITE);
         line1.setTextSize(22);
         line1.setGravity(Gravity.CENTER);
 
-        TextView line2 = new TextView(this);
+        TextView line4 = new TextView(this);
         line2.setText("Black Falcon \uD83E\uDD85");
         line2.setTextColor(Color.WHITE);
         line2.setTextSize(40);
