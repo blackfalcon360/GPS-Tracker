@@ -94,7 +94,6 @@ public class MainActivity extends Activity {
         }
     };
 
-    /** Used while you are not recording, so the screen can show GPS accuracy and elevation before you press Start. */
     private final LocationListener previewListener = new LocationListener() {
         @Override public void onLocationChanged(Location l) {
             if (Recorder.I.recording) return;
@@ -127,7 +126,6 @@ public class MainActivity extends Activity {
         keepOn = prefs.getBoolean("keepOn", true);
         tab = prefs.getInt("tab", 0);
 
-        // an unfinished recording from a crash or a killed app is saved, never lost
         if (!Recorder.I.recording && store.hasCurrent()) {
             String id = store.finalizeCurrent(t("recovered"));
             if (id != null) Toast.makeText(this, t("recovered_toast"), Toast.LENGTH_LONG).show();
@@ -154,6 +152,11 @@ public class MainActivity extends Activity {
         handler.removeCallbacks(ticker);
         try { lm.removeUpdates(previewListener); } catch (Exception e) { }
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
     }
 
     @Override
@@ -187,7 +190,7 @@ public class MainActivity extends Activity {
         if (!running || Recorder.I.recording || !hasPerm()) return;
         try {
             if (gpsEnabled()) lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 0f, previewListener, Looper.getMainLooper());
-        } catch (SecurityException | IllegalArgumentException e) { /* status line explains */ }
+        } catch (SecurityException | IllegalArgumentException e) { }
     }
 
     // ------------------------------------------------------------- helpers
@@ -235,7 +238,6 @@ public class MainActivity extends Activity {
         return p;
     }
 
-    /** A text box whose typed text is BLACK (on a white box), with a dark-on-light cursor. */
     private EditText editBox(String hint, String text) {
         EditText e = new EditText(new ContextThemeWrapper(this, android.R.style.Theme_Material_Light));
         e.setSingleLine(true);
@@ -332,7 +334,7 @@ public class MainActivity extends Activity {
         col.addView(frame, lp(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         root.addView(col, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        TextView credit = tv("By: Black Falcon \uD83E\uDD85", 12, GRAY);
+        TextView credit = tv("By: Black Falcon 🦅", 12, GRAY);
         credit.setPadding(dp(8), dp(3), dp(8), dp(3));
         credit.setBackground(box(0xCC000000, EDGE, 8));
         FrameLayout.LayoutParams cl = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.RIGHT);
@@ -385,7 +387,7 @@ public class MainActivity extends Activity {
         btnMain = button(t("start"), GREEN);
         btnStop = button(t("stop"), RED);
         btnMain.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View v) { onMainButton(); } });
-        btnStop.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View v) { onStop(); } });
+        btnStop.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View v) { onStopClicked(); } });
         btns.addView(btnMain, weight(dp(2), dp(2)));
         btns.addView(btnStop, weight(dp(2), dp(2)));
         LinearLayout.LayoutParams bl = lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0);
@@ -436,10 +438,10 @@ public class MainActivity extends Activity {
         handler.postDelayed(new Runnable() { @Override public void run() { updateRecordUi(); } }, 300);
     }
 
-    private void onStop() {
+    private void onStopClicked() {
         if (!Recorder.I.recording) return;
-        String id = Recorder.I.finish(getString(R.string.app_name));   // saves the track right now
-        TrackService.send(this, TrackService.ACT_STOP, null);          // then shuts the background service down
+        String id = Recorder.I.finish(getString(R.string.app_name));
+        TrackService.send(this, TrackService.ACT_STOP, null);
         Toast.makeText(this, id != null ? t("saved_toast") : t("short_toast"), Toast.LENGTH_SHORT).show();
         recPath.set(new ArrayList<Pt>(), "");
         recElev.set(new double[0], new double[0], fmt.imperial, fmt.distUnit(), fmt.altUnit(), "");
@@ -460,12 +462,12 @@ public class MainActivity extends Activity {
         else if (!gpsEnabled()) { g = t("gps_off"); gc = RED; }
         else if (r.lastFixMs == 0 || now - r.lastFixMs > 20000) { g = t("gps_wait"); gc = AMBER; }
         else {
-            g = t("gps") + " \u00B1" + Math.round(r.lastAcc) + " " + t("m") + (r.sats > 0 ? "  \u00B7  " + r.sats + " " + t("sats") : "");
+            g = t("gps") + " ±" + Math.round(r.lastAcc) + " " + t("m") + (r.sats > 0 ? "  ·  " + r.sats + " " + t("sats") : "");
             gc = r.lastAcc <= 10 ? GREEN : (r.lastAcc <= 25 ? AMBER : RED);
         }
-        gpsTv.setText("\u25CF " + g);
+        gpsTv.setText("● " + g);
         gpsTv.setTextColor(gc);
-        stateTv.setText(rec ? (paused ? "\u275A\u275A " + t("paused") : "\u25CF " + t("recording")) : t("ready"));
+        stateTv.setText(rec ? (paused ? "❚❚ " + t("paused") : "● " + t("recording")) : t("ready"));
         stateTv.setTextColor(rec ? (paused ? AMBER : RED) : GRAY);
 
         clockTv.setText(fmt.dur(rec ? r.elapsed(now) : 0));
@@ -528,7 +530,7 @@ public class MainActivity extends Activity {
         double td = 0, ta = 0;
         for (TrackStore.Meta m : list) { td += m.dist; ta += Double.isNaN(m.asc) ? 0 : m.asc; }
         LinearLayout sum = card();
-        sum.addView(tv(t("total") + ":  " + list.size() + " " + t("tracks_n") + "  \u00B7  " + fmt.dist(td) + "  \u00B7  \u2191 " + fmt.alt(ta), 14, BLUE));
+        sum.addView(tv(t("total") + ":  " + list.size() + " " + t("tracks_n") + "  ·  " + fmt.dist(td) + "  ·  ↑ " + fmt.alt(ta), 14, BLUE));
         tracksBox.addView(sum);
         for (final TrackStore.Meta m : list) {
             LinearLayout c = card();
@@ -536,7 +538,7 @@ public class MainActivity extends Activity {
             n.setTypeface(Typeface.DEFAULT_BOLD);
             c.addView(n);
             c.addView(tv(fmt.date(m.start), 12, GRAY));
-            c.addView(tv(fmt.dist(m.dist) + "  \u00B7  " + fmt.dur(m.dur) + "  \u00B7  \u2191 " + fmt.alt(m.asc) + "  \u2193 " + fmt.alt(m.desc), 14, Color.WHITE));
+            c.addView(tv(fmt.dist(m.dist) + "  ·  " + fmt.dur(m.dur) + "  ·  ↑ " + fmt.alt(m.asc) + "  ↓ " + fmt.alt(m.desc), 14, Color.WHITE));
             c.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View v) { openDetail(m); } });
             tracksBox.addView(c);
         }
@@ -551,7 +553,7 @@ public class MainActivity extends Activity {
 
         LinearLayout top = new LinearLayout(this);
         top.setGravity(Gravity.CENTER_VERTICAL);
-        TextView back = tv("\u2039  " + t("back"), 16, BLUE);
+        TextView back = tv("‹  " + t("back"), 16, BLUE);
         back.setPadding(dp(4), dp(8), dp(14), dp(8));
         back.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View v) { closeDetail(); } });
         top.addView(back);
@@ -580,7 +582,7 @@ public class MainActivity extends Activity {
         elev.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
         elev.set(new double[0], new double[0], fmt.imperial, fmt.distUnit(), fmt.altUnit(), t("loading"));
         ec.addView(elev, lp(ViewGroup.LayoutParams.MATCH_PARENT, dp(190), 0));
-        TextView ec2 = tv(t("min_alt") + " " + fmt.alt(m.minAlt) + "   \u00B7   " + t("max_alt") + " " + fmt.alt(m.maxAlt), 13, Color.WHITE);
+        TextView ec2 = tv(t("min_alt") + " " + fmt.alt(m.minAlt) + "    ·    " + t("max_alt") + " " + fmt.alt(m.maxAlt), 13, Color.WHITE);
         ec2.setPadding(0, dp(4), 0, 0);
         ec.addView(ec2);
         detailBox.addView(ec);
@@ -624,165 +626,4 @@ public class MainActivity extends Activity {
         c.setOrientation(LinearLayout.VERTICAL);
         c.setBackground(box(CARD, EDGE, 12));
         c.setPadding(dp(12), dp(8), dp(12), dp(8));
-        c.addView(tv(title, 12, GRAY));
-        TextView v = tv(value, 18, Color.WHITE);
-        v.setTypeface(Typeface.DEFAULT_BOLD);
-        c.addView(v);
-        return c;
-    }
-
-    private void closeDetail() {
-        detailOpen = false;
-        detailMeta = null;
-        showTab();
-        refreshTracks();
-    }
-
-    private AlertDialog.Builder dialog() {
-        return new AlertDialog.Builder(new ContextThemeWrapper(this, android.R.style.Theme_Material_Light_Dialog_Alert));
-    }
-
-    private void renameDialog(final TrackStore.Meta m) {
-        final EditText e = editBox(t("name_hint"), m.name);
-        FrameLayout wrap = new FrameLayout(this);
-        wrap.setPadding(dp(20), dp(8), dp(20), 0);
-        wrap.addView(e);
-        dialog().setTitle(t("rename")).setView(wrap)
-                .setPositiveButton(t("save"), new DialogInterface.OnClickListener() {
-                    @Override public void onClick(DialogInterface d, int w) {
-                        String nm = e.getText().toString().trim();
-                        if (nm.length() == 0) return;
-                        store.rename(m.id, nm);
-                        for (TrackStore.Meta x : store.list()) if (x.id.equals(m.id)) { openDetail(x); break; }
-                    }
-                }).setNegativeButton(t("cancel"), null).show();
-    }
-
-    private void deleteDialog(final TrackStore.Meta m) {
-        dialog().setTitle(t("delete_q")).setMessage(t("delete_msg"))
-                .setPositiveButton(t("delete"), new DialogInterface.OnClickListener() {
-                    @Override public void onClick(DialogInterface d, int w) {
-                        store.delete(m.id);
-                        closeDetail();
-                    }
-                }).setNegativeButton(t("cancel"), null).show();
-    }
-
-    private void startExport(TrackStore.Meta m) {
-        pendingExport = m;
-        String safe = m.name.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
-        if (safe.length() == 0) safe = "track";
-        Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-        i.addCategory(Intent.CATEGORY_OPENABLE);
-        i.setType("application/gpx+xml");
-        i.putExtra(Intent.EXTRA_TITLE, safe + ".gpx");
-        try {
-            startActivityForResult(i, REQ_EXPORT);
-        } catch (Exception e) {
-            Toast.makeText(this, t("export_fail"), Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int req, int res, final Intent data) {
-        super.onActivityResult(req, res, data);
-        if (req != REQ_EXPORT || res != RESULT_OK || data == null || data.getData() == null || pendingExport == null) return;
-        final Uri uri = data.getData();
-        final TrackStore.Meta m = pendingExport;
-        io.execute(new Runnable() {
-            @Override public void run() {
-                boolean ok = false;
-                try {
-                    OutputStream os = getContentResolver().openOutputStream(uri);
-                    if (os != null) {
-                        TrackStore.writeGpx(m.name, store.load(m.id), os);
-                        os.close();
-                        ok = true;
-                    }
-                } catch (Exception e) {
-                    ok = false;
-                }
-                final boolean fok = ok;
-                handler.post(new Runnable() {
-                    @Override public void run() { Toast.makeText(MainActivity.this, t(fok ? "exported" : "export_fail"), Toast.LENGTH_SHORT).show(); }
-                });
-            }
-        });
-    }
-
-    // ------------------------------------------------------------- settings page
-    private TextView title(String s) {
-        TextView x = tv(s, 14, AMBER);
-        x.setTypeface(Typeface.DEFAULT_BOLD);
-        x.setPadding(dp(2), dp(10), 0, dp(6));
-        return x;
-    }
-
-    private void putAndRebuild(String key, int value) {
-        prefs.edit().putInt(key, value).apply();
-        recreate();
-    }
-
-    private View buildSettings() {
-        ScrollView sv = new ScrollView(this);
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(dp(2), dp(2), dp(2), dp(48));
-        sv.addView(box);
-
-        box.addView(title(t("lang")));
-        LinearLayout lr = new LinearLayout(this);
-        String[] ln = {"English", "اردو", "العربية"};
-        for (int i = 0; i < 3; i++) {
-            final int li = i;
-            lr.addView(chip(ln[i], fmt.lang == i, new View.OnClickListener() { @Override public void onClick(View v) { putAndRebuild("lang", li); } }), weight(dp(2), dp(2)));
-        }
-        box.addView(lr);
-
-        box.addView(title(t("units")));
-        LinearLayout ur = new LinearLayout(this);
-        ur.addView(chip(t("metric"), !fmt.imperial, new View.OnClickListener() {
-            @Override public void onClick(View v) { prefs.edit().putBoolean("imperial", false).apply(); recreate(); }
-        }), weight(dp(2), dp(2)));
-        ur.addView(chip(t("imperial"), fmt.imperial, new View.OnClickListener() {
-            @Override public void onClick(View v) { prefs.edit().putBoolean("imperial", true).apply(); recreate(); }
-        }), weight(dp(2), dp(2)));
-        box.addView(ur);
-
-        box.addView(title(t("interval")));
-        LinearLayout ir = new LinearLayout(this);
-        String[] ik = {"i1", "i2", "i3"};
-        for (int i = 0; i < 3; i++) {
-            final int ii = i;
-            ir.addView(chip(t(ik[i]), intervalIdx == i, new View.OnClickListener() { @Override public void onClick(View v) { putAndRebuild("interval", ii); } }), weight(dp(2), dp(2)));
-        }
-        box.addView(ir);
-
-        box.addView(title(t("accuracy")));
-        LinearLayout ar = new LinearLayout(this);
-        String[] ak = {"a1", "a2", "a3"};
-        for (int i = 0; i < 3; i++) {
-            final int ai = i;
-            ar.addView(chip(t(ak[i]), accIdx == i, new View.OnClickListener() { @Override public void onClick(View v) { putAndRebuild("acc", ai); } }), weight(dp(2), dp(2)));
-        }
-        box.addView(ar);
-
-        box.addView(title(t("keep_on")));
-        LinearLayout kr = new LinearLayout(this);
-        kr.addView(chip(t("on"), keepOn, new View.OnClickListener() {
-            @Override public void onClick(View v) { prefs.edit().putBoolean("keepOn", true).apply(); recreate(); }
-        }), weight(dp(2), dp(2)));
-        kr.addView(chip(t("off"), !keepOn, new View.OnClickListener() {
-            @Override public void onClick(View v) { prefs.edit().putBoolean("keepOn", false).apply(); recreate(); }
-        }), weight(dp(2), dp(2)));
-        box.addView(kr);
-
-        TextView about = tv(t("about"), 12, GRAY);
-        about.setPadding(dp(4), dp(16), dp(4), 0);
-        box.addView(about);
-        TextView credit = tv("Brought to you By: Black Falcon \uD83E\uDD85", 13, GRAY);
-        credit.setPadding(dp(4), dp(12), 0, 0);
-        box.addView(credit);
-        return sv;
-    }
-}
+        c.addView(tv(
