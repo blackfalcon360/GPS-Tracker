@@ -756,23 +756,6 @@ public class MainActivity extends Activity {
         box.setPadding(dp(2), dp(2), dp(2), dp(48));
         sv.addView(box);
 
-        // Theme Setting Section
-        box.addView(title("Theme / تھیم"));
-        LinearLayout tr = new LinearLayout(this);
-        tr.addView(chip("Dark / ڈارک", darkMode, new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                prefs.edit().putBoolean("darkMode", true).apply();
-                recreate();
-            }
-        }), weight(dp(2), dp(2)));
-        tr.addView(chip("Light / لائٹ", !darkMode, new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                prefs.edit().putBoolean("darkMode", false).apply();
-                recreate();
-            }
-        }), weight(dp(2), dp(2)));
-        box.addView(tr);
-
         box.addView(title(t("lang")));
         LinearLayout lr = new LinearLayout(this);
         String[] ln = {"English", "اردو", "العربية"};
@@ -845,6 +828,39 @@ public class MainActivity extends Activity {
             }
         }), weight(dp(2), dp(2)));
         box.addView(sr);
+
+        // Language-Specific Theme Labels (Shifted to the bottom)
+        String themeHeading, darkText, lightText;
+        if (fmt.lang == Lang.UR) {
+            themeHeading = "تھیم";
+            darkText = "ڈارک";
+            lightText = "لائٹ";
+        } else if (fmt.lang == Lang.AR) {
+            themeHeading = "السمة";
+            darkText = "داكن";
+            lightText = "فاتح";
+        } else {
+            themeHeading = "Theme";
+            darkText = "Dark";
+            lightText = "Light";
+        }
+
+        // Theme Setting Section at the bottom
+        box.addView(title(themeHeading));
+        LinearLayout tr = new LinearLayout(this);
+        tr.addView(chip(darkText, darkMode, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                prefs.edit().putBoolean("darkMode", true).apply();
+                recreate();
+            }
+        }), weight(dp(2), dp(2)));
+        tr.addView(chip(lightText, !darkMode, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                prefs.edit().putBoolean("darkMode", false).apply();
+                recreate();
+            }
+        }), weight(dp(2), dp(2)));
+        box.addView(tr);
 
         return sv;
     }
