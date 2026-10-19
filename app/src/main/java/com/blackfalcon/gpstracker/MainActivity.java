@@ -626,4 +626,189 @@ public class MainActivity extends Activity {
         c.setOrientation(LinearLayout.VERTICAL);
         c.setBackground(box(CARD, EDGE, 12));
         c.setPadding(dp(12), dp(8), dp(12), dp(8));
-        c.addView(tv(
+        c.addView(tv(title, 12, GRAY));
+        TextView v = tv(value, 18, Color.WHITE);
+        v.setTypeface(Typeface.DEFAULT_BOLD);
+        c.addView(v);
+        return c;
+    }
+
+    private void closeDetail() {
+        detailOpen = false;
+        detailMeta = null;
+        showTab();
+        refreshTracks();
+    }
+
+    private AlertDialog.Builder dialog() {
+        return new AlertDialog.Builder(new ContextThemeWrapper(this, android.R.style.Theme_Material_Light_Dialog_Alert));
+    }
+
+    private void renameDialog(final TrackStore.Meta m) {
+        final EditText e = editBox(t("name_hint"), m.name);
+        FrameLayout wrap = new FrameLayout(this);
+        wrap.setPadding(dp(20), dp(8), dp(20), 0);
+        wrap.addView(e);
+        dialog().setTitle(t("rename")).setView(wrap)
+                .setPositiveButton(t("save"), new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface d, int w) {
+                        String nm = e.getText().toString().trim();
+                        if (nm.length() == 0) return;
+                        store.rename(m.id, nm);
+                        for (TrackStore.Meta x : store.list()) if (x.id.equals(m.id)) { openDetail(x); break; }
+                    }
+                }).setNegativeButton(t("cancel"), null).show();
+    }
+
+    private void deleteDialog(final TrackStore.Meta m) {
+        dialog().setTitle(t("delete_q")).setMessage(t("delete_msg"))
+                .setPositiveButton(t("delete"), new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface d, int w) {
+                        store.delete(m.id);
+                        closeDetail();
+                    }
+                }).setNegativeButton(t("cancel"), null).show();
+    }
+
+    private void startExport(TrackStore.Meta m) {
+        pendingExport = m;
+        String safe = m.name.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
+        if (safe.length() == 0) safe = "track";
+        Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        i.addCategory(Intent.CATEGORY_OPENABLE);
+        i.setType("application/gpx+xml");
+        i.putExtra(Intent.EXTRA_TITLE, safe + ".gpx");
+        try {
+            startActivityForResult(i, REQ_EXPORT);
+        } catch (Exception e) {
+            Toast.makeText(this, t("export_fail"), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int req, int res, final Intent data) {
+        super.onActivityResult(req, res, data);
+        if (req != REQ_EXPORT || res != RESULT_OK || data == null || data.getData() == null || pendingExport == null) return;
+        final Uri uri = data.getData();
+        final TrackStore.Meta m = pendingExport;
+        io.execute(new Runnable() {
+            @Override public void run() {
+                boolean ok = false;
+                try {
+                    OutputStream os = getContentResolver().openOutputStream(uri);
+                    if (os != null) {
+                        TrackStore.writeGpx(m.name, store.load(m.id), os);
+                        os.close();
+                        ok = true;
+                    }
+                } catch (Exception e) {
+                    ok = false;
+                }
+                final boolean fok = ok;
+                handler.post(new Runnable() {
+                    @Override public void run() { Toast.makeText(MainActivity.this, t(fok ? "exported" : "export_fail"), Toast.LENGTH_SHORT).show(); }
+                });
+            }
+        });
+    }
+
+    // ------------------------------------------------------------- settings page
+    private TextView title(String s) {
+        TextView x = tv(s, 14, AMBER);
+        x.setTypeface(Typeface.DEFAULT_BOLD);
+        x.setPadding(dp(2), dp(10), 0, dp(6));
+        return x;
+    }
+
+    private void putAndRebuild(String key, int value) {
+        prefs.edit().putInt(key, value).apply();
+        recreate();
+    }
+
+    private View buildSettings() {
+        ScrollView sv = new ScrollView(this);
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(2), dp(2), dp(2), dp(48));
+        sv.addView(box);
+
+        box.addView(title(t("lang")));
+        LinearLayout lr = new LinearLayout(this);
+        String[] ln = {"English", "اردو", "العربية"};
+        for (int i = 0; i < 3; i++) {
+            final int li = i;
+            lr.addView(chip(ln[i], fmt.lang == i, new View.OnClickListener() { @Override public void onClick(View v) { putAndRebuild("lang", li); } }), weight(dp(2), dp(2)));
+        }
+        box.addView(lr);
+
+        box.addView(title(t("units")));
+        LinearLayout ur = new LinearLayout(this);
+        ur.addView(chip(t("metric"), !fmt.imperial, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                prefs.edit().putBoolean("imperial", false).apply();
+                recreate();
+            }
+        }), weight(dp(2), dp(2)));
+        ur.addView(chip(t("imperial"), fmt.imperial, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                prefs.edit().putBoolean("imperial", true).apply();
+                recreate();
+            }
+        }), weight(dp(2), dp(2)));
+        box.addView(ur);
+
+        box.addView(title(t("interval")));
+        LinearLayout ir = new LinearLayout(this);
+        final String[] ins = {"1s", "3s", "10s"};
+        for (int i = 0; i < 3; i++) {
+            final int ii = i;
+            ir.addView(chip(ins[i], intervalIdx == i, new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    intervalIdx = ii;
+                    prefs.edit().putInt("interval", ii).apply();
+                    rebuildSettingsValues();
+                }
+            }), weight(dp(2), dp(2)));
+        }
+        box.addView(ir);
+
+        box.addView(title(t("acc")));
+        LinearLayout ar = new LinearLayout(this);
+        final String[] acs = {t("acc_high"), t("acc_bal"), t("acc_low")};
+        for (int i = 0; i < 3; i++) {
+            final int ai = i;
+            ar.addView(chip(acs[i], accIdx == i, new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    accIdx = ai;
+                    prefs.edit().putInt("acc", ai).apply();
+                    rebuildSettingsValues();
+                }
+            }), weight(dp(2), dp(2)));
+        }
+        box.addView(ar);
+
+        box.addView(title(t("screen")));
+        LinearLayout sr = new LinearLayout(this);
+        sr.addView(chip(t("screen_off"), !keepOn, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                keepOn = false;
+                prefs.edit().putBoolean("keepOn", false).apply();
+                recreate();
+            }
+        }), weight(dp(2), dp(2)));
+        sr.addView(chip(t("screen_on"), keepOn, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                keepOn = true;
+                prefs.edit().putBoolean("keepOn", true).apply();
+                recreate();
+            }
+        }), weight(dp(2), dp(2)));
+        box.addView(sr);
+
+        return sv;
+    }
+
+    private void rebuildSettingsValues() {
+        showTab();
+    }
+}
